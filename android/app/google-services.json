@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "725715994778",
+    "project_id": "rumah-sewa-c48b2",
+    "storage_bucket": "rumah-sewa-c48b2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:725715994778:android:e83a850b36a630d9887723",
+        "android_client_info": {
+          "package_name": "com.example.rumah_sewa_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCp7BBViDYR_XAnDuxDMZj4FH228t1K8jE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
