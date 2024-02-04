@@ -28,6 +28,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  int _selectedIndex = 0;
+  static const TextStyle optionStyle =
+      TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
+  static const List<Widget> _widgetOptions = <Widget>[
+    Text(
+      'Home',
+      style: optionStyle,
+    ),
+    Text(
+      'Bills',
+      style: optionStyle,
+    ),
+    Text(
+      'To do list',
+      style: optionStyle,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,6 +69,25 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         title: Text('Home Page'),
         backgroundColor: Colors.lightBlueAccent,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.note),
+            label: 'Bill',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shop),
+            label: 'To do list',
+          )
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.amber[800],
+        onTap: _onItemTapped,
       ),
       body: Center(
         child: Text(
