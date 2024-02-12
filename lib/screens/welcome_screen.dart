@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../utils/rounded_button.dart';
 
 class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
+
   @override
   _WelcomeScreenState createState() => _WelcomeScreenState();
 }
@@ -12,7 +14,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Scaffold(
         backgroundColor: Colors.white,
         body: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -29,6 +31,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     title: 'Register',
                     onPressed: () {
                       Navigator.pushNamed(context, 'registration_screen');
+                    }),
+                RoundedButton(
+                    colour: Colors.black,
+                    title: 'Goto Home',
+                    onPressed: () {
+                      Navigator.pushNamed(context, 'home_screen');
                     }),
               ]),
         ));

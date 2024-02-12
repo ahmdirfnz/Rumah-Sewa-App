@@ -56,16 +56,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text('Home Page'),
+        title: Text('Rumah Sewa App'),
         backgroundColor: Colors.lightBlueAccent,
       ),
       drawer: Drawer(
-        // Add a ListView to the drawer. This ensures the user can scroll
-        // through the options in the drawer if there isn't enough vertical
-        // space to fit everything.
         child: ListView(
-          // Important: Remove any padding from the ListView.
           padding: EdgeInsets.zero,
           children: [
             const DrawerHeader(
@@ -75,17 +70,33 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text('Drawer Header'),
             ),
             ListTile(
-              title: const Text('Item 1'),
+              title: const Text('Profile'),
+              selected: _selectedIndex == 0,
               onTap: () {
-                // Update the state of the app.
-                // ...
+                // Update the state of the app
+                _onItemTapped(0);
+                // Then close the drawer
+                Navigator.pop(context);
               },
             ),
             ListTile(
-              title: const Text('Item 2'),
+              title: const Text('Settings'),
+              selected: _selectedIndex == 1,
               onTap: () {
-                // Update the state of the app.
-                // ...
+                // Update the state of the app
+                _onItemTapped(1);
+                // Then close the drawer
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('About'),
+              selected: _selectedIndex == 2,
+              onTap: () {
+                // Update the state of the app
+                _onItemTapped(2);
+                // Then close the drawer
+                Navigator.pop(context);
               },
             ),
           ],
@@ -113,31 +124,118 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Center(
-            child: Card(
-              child: SizedBox(
-                width: 300,
-                height: 100,
-                child: Center(child: Text('Barang Masak')),
-              ),
+          Card(
+            child: ExpansionTile(
+              expandedAlignment: Alignment.centerLeft,
+              title: Text('Barang Masak'),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Row(
+                    children: [
+                      Text('Ikan'),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Row(
+                    children: [
+                      Text('Sayur'),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            primary: Colors.blueAccent,
+                            onPrimary: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0)),
+                            minimumSize: Size(370, 29)),
+                        onPressed: () {},
+                        child: Text('Add Item'))
+                  ],
+                ),
+              ],
             ),
           ),
-          Center(
-            child: Card(
-              child: SizedBox(
-                width: 300,
-                height: 100,
-                child: Center(child: Text('Barang Rumah')),
-              ),
+          Card(
+            child: ExpansionTile(
+              expandedAlignment: Alignment.centerLeft,
+              title: Text('Barang Rumah'),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Row(
+                    children: [
+                      Text('Ikan'),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Row(
+                    children: [
+                      Text('Sayur'),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            primary: Colors.blueAccent,
+                            onPrimary: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0)),
+                            minimumSize: Size(370, 29)),
+                        onPressed: () {},
+                        child: Text('Add Item'))
+                  ],
+                ),
+              ],
             ),
           ),
-          Center(
-            child: Card(
-              child: SizedBox(
-                width: 300,
-                height: 100,
-                child: Center(child: Text('Barang Nak Kene Beli')),
-              ),
+          Card(
+            child: ExpansionTile(
+              expandedAlignment: Alignment.centerLeft,
+              title: Text('Barang Nak Kene Beli'),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Row(
+                    children: [
+                      Text('Ikan'),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Row(
+                    children: [
+                      Text('Sayur'),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            primary: Colors.blueAccent,
+                            onPrimary: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0)),
+                            minimumSize: Size(370, 29)),
+                        onPressed: () {},
+                        child: Text('Add Item'))
+                  ],
+                ),
+              ],
             ),
           ),
         ],
