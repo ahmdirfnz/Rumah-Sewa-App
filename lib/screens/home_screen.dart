@@ -63,11 +63,25 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
+            UserAccountsDrawerHeader(
+              accountName: Text(
+                'ahmdirfnz',
               ),
-              child: Text('Drawer Header'),
+              accountEmail: const Row(
+                children: [
+                  Text(
+                    'irfanz@gmail.com',
+                  ),
+                ],
+              ),
+              currentAccountPicture: CircleAvatar(
+                backgroundImage:
+                    NetworkImage('https://picsum.photos/250?image=9'),
+              ),
+              decoration: BoxDecoration(color: Colors.green),
+              onDetailsPressed: () {
+                // ...
+              },
             ),
             ListTile(
               title: const Text('Profile'),
@@ -125,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Card(
+            color: Colors.greenAccent,
             child: ExpansionTile(
               expandedAlignment: Alignment.centerLeft,
               title: Text('Barang Masak'),
@@ -163,9 +178,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Card(
+            color: Colors.blueGrey,
             child: ExpansionTile(
               expandedAlignment: Alignment.centerLeft,
-              title: Text('Barang Rumah'),
+              title: Text(
+                'Barang Rumah',
+                style: TextStyle(color: Colors.white),
+              ),
               children: [
                 Padding(
                   padding: const EdgeInsets.only(left: 8.0),
