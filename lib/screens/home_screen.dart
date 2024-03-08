@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/item.dart';
 
 late User loggedinUser;
 
@@ -10,10 +12,40 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _auth = FirebaseAuth.instance;
+  final TextEditingController _itemNameController = TextEditingController();
 
   void initState() {
     super.initState();
     getCurrentUser();
+  }
+
+  Future<void> addItemToFirestore(String category, Item item) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(loggedinUser.uid)
+          .collection(category)
+          .add(item.toMap());
+    } catch (e) {
+      print('Error adding item: $e');
+    }
+  }
+
+  Future<List<Item>> fetchItemsFromFirestore(String category) async {
+    List<Item> items = [];
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(loggedinUser.uid)
+          .collection(category)
+          .get();
+      querySnapshot.docs.forEach((doc) {
+        items.add(Item(name: doc['name'], category: doc['category']));
+      });
+    } catch (e) {
+      print('Error fetching items: $e');
+    }
+    return items;
   }
 
   //using this function you can use the credentials of the user
@@ -138,127 +170,88 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Card(
-            color: Colors.greenAccent,
-            child: ExpansionTile(
-              expandedAlignment: Alignment.centerLeft,
-              title: Text('Barang Masak'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Row(
-                    children: [
-                      Text('Ikan'),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Row(
-                    children: [
-                      Text('Sayur'),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            primary: Colors.blueAccent,
-                            onPrimary: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5.0)),
-                            minimumSize: Size(370, 29)),
-                        onPressed: () {},
-                        child: Text('Add Item'))
-                  ],
-                ),
-              ],
+          _buildCategoryCard('Barang Masak'),
+          _buildCategoryCard('Barang Rumah'),
+          _buildCategoryCard('Barang Nak Kene Beli'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(String category) {
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(category),
+            trailing: IconButton(
+              icon: Icon(Icons.add),
+              onPressed: () {
+                _addItemDialog(context, category);
+              },
             ),
           ),
-          Card(
-            color: Colors.blueGrey,
-            child: ExpansionTile(
-              expandedAlignment: Alignment.centerLeft,
-              title: Text(
-                'Barang Rumah',
-                style: TextStyle(color: Colors.white),
-              ),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Row(
-                    children: [
-                      Text('Ikan'),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Row(
-                    children: [
-                      Text('Sayur'),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            primary: Colors.blueAccent,
-                            onPrimary: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5.0)),
-                            minimumSize: Size(370, 29)),
-                        onPressed: () {},
-                        child: Text('Add Item'))
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Card(
-            child: ExpansionTile(
-              expandedAlignment: Alignment.centerLeft,
-              title: Text('Barang Nak Kene Beli'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Row(
-                    children: [
-                      Text('Ikan'),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Row(
-                    children: [
-                      Text('Sayur'),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            primary: Colors.blueAccent,
-                            onPrimary: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5.0)),
-                            minimumSize: Size(370, 29)),
-                        onPressed: () {},
-                        child: Text('Add Item'))
-                  ],
-                ),
-              ],
-            ),
+          FutureBuilder<List<Item>>(
+            future: fetchItemsFromFirestore(category),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator();
+              } else {
+                if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                } else {
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: ClampingScrollPhysics(),
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(snapshot.data![index].name),
+                      );
+                    },
+                  );
+                }
+              }
+            },
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _addItemDialog(BuildContext context, String category) async {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add Item'),
+          content: TextField(
+            controller: _itemNameController,
+            decoration: InputDecoration(hintText: 'Enter item name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_itemNameController.text.isNotEmpty) {
+                  addItemToFirestore(
+                    category,
+                    Item(name: _itemNameController.text, category: category),
+                  );
+                  _itemNameController.clear();
+                  Navigator.pop(context);
+                }
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
