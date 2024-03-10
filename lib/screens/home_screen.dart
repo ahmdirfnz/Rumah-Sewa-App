@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rumah_sewa_app/screens/bill_screen.dart';
 import 'package:rumah_sewa_app/screens/personalTodoList_screen.dart';
+import 'package:rumah_sewa_app/screens/splitBillCalculator_screen.dart';
 import '../utils/item.dart';
 
 User? loggedinUser;
@@ -58,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static List<Widget> _widgetOptions = <Widget>[
     HomePage(),
     BillScreen(),
-    TodoList(),
+    SplitBillCalculatorPage(),
   ];
 
   @override
@@ -178,6 +179,23 @@ class _HomePageState extends State<HomePage> {
     getCurrentUser();
   }
 
+  void _deleteAllItemsInCategory(String category) {
+    try {
+      FirebaseFirestore.instance
+          .collection('categories')
+          .doc(category)
+          .collection('items')
+          .get()
+          .then((snapshot) {
+        for (DocumentSnapshot doc in snapshot.docs) {
+          doc.reference.delete();
+        }
+      });
+    } catch (e) {
+      print('Error deleting items in category $category: $e');
+    }
+  }
+
   Future<void> addItemToFirestore(String collectionPath, Item item) async {
     try {
       await FirebaseFirestore.instance
@@ -236,11 +254,24 @@ class _HomePageState extends State<HomePage> {
         children: [
           ListTile(
             title: Text(category),
-            trailing: IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                _addItemDialog(context, category);
-              },
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  color: Colors.red,
+                  icon: Icon(Icons.delete),
+                  onPressed: () {
+                    _deleteAllItemsInCategory(category);
+                  },
+                ),
+                IconButton(
+                  color: const Color.fromARGB(255, 34, 116, 37),
+                  icon: Icon(Icons.add),
+                  onPressed: () {
+                    _addItemDialog(context, category);
+                  },
+                ),
+              ],
             ),
           ),
           _buildItemList(category),
