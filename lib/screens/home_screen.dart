@@ -178,9 +178,11 @@ class _HomePageState extends State<HomePage> {
     getCurrentUser();
   }
 
-  Future<void> addItemToFirestore(String category, Item item) async {
+  Future<void> addItemToFirestore(String collectionPath, Item item) async {
     try {
-      await FirebaseFirestore.instance.collection('items').add(item.toMap());
+      await FirebaseFirestore.instance
+          .collection(collectionPath)
+          .add(item.toMap());
     } catch (e) {
       print('Error adding item: $e');
     }
@@ -193,7 +195,8 @@ class _HomePageState extends State<HomePage> {
               .map((doc) => Item(
                   name: doc['name'],
                   category: doc['category'],
-                  timestamp: doc['timestamp']))
+                  timestamp: doc['timestamp'],
+                  status: doc['status']))
               .toList());
     } catch (e) {
       print('Error fetching items: $e');
@@ -240,35 +243,60 @@ class _HomePageState extends State<HomePage> {
               },
             ),
           ),
-          StreamBuilder<List<Item>>(
-            stream: fetchItemsFromFirestore(category),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator();
-              } else {
-                if (snapshot.hasError) {
-                  return Text('Error: ${snapshot.error}');
-                } else {
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: ClampingScrollPhysics(),
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      return CheckboxListTile(
-                        // tileColor: Colors.red,
-                        title: Text(snapshot.data![index].name),
-                        value: false,
-                        onChanged: (bool? value) {},
-                      );
-                    },
-                  );
-                }
-              }
-            },
-          ),
+          _buildItemList(category),
         ],
       ),
     );
+  }
+
+  Widget _buildItemList(String category) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('categories')
+          .doc(category)
+          .collection('items')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        } else {
+          if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: ClampingScrollPhysics(),
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                final item = Item.fromMap(
+                    snapshot.data!.docs[index].data() as Map<String, dynamic>);
+                return CheckboxListTile(
+                  title: Text(item.name),
+                  value: item.status ?? false,
+                  onChanged: (bool? value) {
+                    _updateItemStatus(
+                        category, snapshot.data!.docs[index].id, value);
+                  },
+                );
+              },
+            );
+          }
+        }
+      },
+    );
+  }
+
+  void _updateItemStatus(String category, String itemId, bool? status) {
+    try {
+      FirebaseFirestore.instance
+          .collection('categories')
+          .doc(category)
+          .collection('items')
+          .doc(itemId)
+          .update({'status': status});
+    } catch (e) {
+      print('Error updating item status: $e');
+    }
   }
 
   Future<void> _addItemDialog(BuildContext context, String category) async {
@@ -291,13 +319,12 @@ class _HomePageState extends State<HomePage> {
             TextButton(
               onPressed: () {
                 if (_itemNameController.text.isNotEmpty) {
-                  final timestamp = Timestamp.now();
-                  addItemToFirestore(
-                      category,
-                      Item(
-                          name: _itemNameController.text,
-                          category: category,
-                          timestamp: timestamp));
+                  final item = Item(
+                      name: _itemNameController.text,
+                      category: category,
+                      timestamp: DateTime.now(),
+                      status: false);
+                  addItemToFirestore('categories/$category/items', item);
                   _itemNameController.clear();
                   Navigator.pop(context);
                 }
