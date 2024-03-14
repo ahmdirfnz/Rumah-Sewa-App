@@ -29,7 +29,8 @@ class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
     int numOfPeople = int.parse(_numOfPeopleController.text);
     double splitAmount = totalBill / numOfPeople;
     setState(() {
-      _splitStatement = 'Each person owes \$${splitAmount.toStringAsFixed(2)}';
+      _splitStatement =
+          'Each person owes \RM ${splitAmount.toStringAsFixed(2)}';
     });
   }
 
@@ -56,14 +57,14 @@ class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
               style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10.0),
-            TextField(
-              controller: _itemNameController,
-              decoration: InputDecoration(labelText: 'Item Name'),
-            ),
-            SizedBox(height: 10.0),
+            // TextField(
+            //   controller: _itemNameController,
+            //   decoration: InputDecoration(labelText: 'Item Name'),
+            // ),
+            // SizedBox(height: 10.0),
             TextField(
               controller: _itemCostController,
-              decoration: InputDecoration(labelText: 'Item Cost (\$)'),
+              decoration: InputDecoration(labelText: 'Item Cost (\RM)'),
               keyboardType: TextInputType.numberWithOptions(decimal: true),
             ),
             SizedBox(height: 10.0),
@@ -79,7 +80,7 @@ class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
             ),
             SizedBox(height: 20.0),
             Text(
-              'Total Bill Amount: \$${_totalBillAmount.toStringAsFixed(2)}',
+              'Total Bill Amount: \RM${_totalBillAmount.toStringAsFixed(2)}',
               style: TextStyle(fontSize: 18.0),
             ),
             SizedBox(height: 20.0),
@@ -94,7 +95,7 @@ class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
               child: TextButton(
                 onPressed: _calculateSplitAmount,
                 child: Text(
-                  'Calculate Split',
+                  'Calculate',
                   style: TextStyle(fontSize: 18.0),
                 ),
               ),
