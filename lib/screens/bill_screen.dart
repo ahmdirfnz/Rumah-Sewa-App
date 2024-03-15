@@ -204,16 +204,6 @@ class _BillScreenState extends State<BillScreen> {
     }
   }
 
-  // Stream<QuerySnapshot> _getBillsStream(DateTime month) {
-  //   final startOfMonth = DateTime(month.year, month.month, 1);
-  //   final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
-  //   return FirebaseFirestore.instance
-  //       .collection('bills')
-  //       .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
-  //       .where('timestamp', isLessThanOrEqualTo: endOfMonth)
-  //       .snapshots();
-  // }
-
   Future<void> _fetchRentBill() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -243,48 +233,6 @@ class _BillScreenState extends State<BillScreen> {
       print("Error fetching rent bill: $e");
     }
   }
-
-  // void _saveBill() async {
-  //   final waterBill = double.parse(waterController.text);
-  //   final electricityBill = double.parse(electricityController.text);
-  //   final wifiBill = double.parse(wifiController.text);
-  //   final rent = double.parse(
-  //       rentController.text); // Assuming rent is part of personal bills only
-
-  //   setState(() {
-  //     totalBill = waterBill + electricityBill + wifiBill + rent;
-  //     splitAmount = totalBill / 3; // Adjust based on your splitting logic.
-  //   });
-
-  //   // Create the Bill object for personal bill
-  //   final personalBill = Bill(
-  //     water: waterBill,
-  //     electricity: electricityBill,
-  //     wifi: wifiBill,
-  //     rent: rent,
-  //     total: totalBill,
-  //     timestamp: DateTime.now(),
-  //   );
-
-  //   // Create a similar Bill object for the general bill, excluding the rent
-  //   final generalBill = Bill(
-  //     water: waterBill,
-  //     electricity: electricityBill,
-  //     wifi: wifiBill,
-  //     rent: rent,
-  //     total: waterBill + electricityBill + wifiBill, // No rent included
-  //     timestamp: DateTime.now(),
-  //   );
-
-  //   // Save the personal bill
-  //   await _savePersonalBill(selectedMonth, personalBill);
-
-  //   // Save the general bill
-  //   await _saveGeneralBill(selectedMonth, generalBill);
-
-  //   ScaffoldMessenger.of(context)
-  //       .showSnackBar(SnackBar(content: Text('Bill saved successfully')));
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -408,14 +356,14 @@ class _BillScreenState extends State<BillScreen> {
         ),
         SizedBox(height: 20),
         // Other widgets...
-        TextFormField(
-          controller: rentController, // Use the controller here
-          readOnly: true,
-          decoration: InputDecoration(
-            labelText: 'Rent Bill (RM)',
-            border: OutlineInputBorder(),
-          ),
-        ),
+        // TextFormField(
+        //   controller: rentController, // Use the controller here
+        //   readOnly: true,
+        //   decoration: InputDecoration(
+        //     labelText: 'Rent Bill (RM)',
+        //     border: OutlineInputBorder(),
+        //   ),
+        // ),
         // Other widgets...
         SizedBox(height: 20),
         ElevatedButton(

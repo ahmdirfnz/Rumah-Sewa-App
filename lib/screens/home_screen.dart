@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rumah_sewa_app/screens/bill_screen.dart';
 import 'package:rumah_sewa_app/screens/personalTodoList_screen.dart';
 import 'package:rumah_sewa_app/screens/splitBillCalculator_screen.dart';
+import 'package:rumah_sewa_app/utils/auth_service.dart';
 import '../utils/item.dart';
 
 User? loggedinUser;
@@ -68,8 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           actions: [
             IconButton(
-                onPressed: () {
-                  _auth.signOut();
+                onPressed: () async {
+                  await AuthService().signOut();
                   Navigator.pushNamed(context, 'welcome_screen');
                 },
                 icon: Icon(Icons.logout_rounded))
