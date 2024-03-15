@@ -75,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.logout_rounded))
           ],
           title: const Text(
-            'Rumah Sewa Management App',
+            'Kroni KL Management App',
             style: TextStyle(
                 fontSize: 20.0,
                 color: Colors.white,

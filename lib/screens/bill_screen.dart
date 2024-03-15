@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:rumah_sewa_app/widget/billDetailsCard.dart';
 
 import '../utils/bill.dart';
 
@@ -20,17 +21,57 @@ class _BillScreenState extends State<BillScreen> {
   double totalBill = 0.0;
   double splitAmount = 0.0;
   double rentBill = 0.0;
-  bool isLoading = false;
+  String userRole = 'user';
+  bool isLoading = true;
 
   late DateTime selectedMonth = DateTime.now();
-  late Stream<QuerySnapshot> billsStream;
+  List<DateTime> months = List.generate(12, (index) {
+    DateTime now = DateTime.now();
+    return DateTime(now.year, now.month - index);
+  }).reversed.toList(); // Generates a list of the last 12 months
+  // late Stream<QuerySnapshot> billsStream;
+  late Stream<DocumentSnapshot> personalBillStream;
+  late Stream<DocumentSnapshot> generalBillStream;
 
   @override
   void initState() {
     super.initState();
     selectedMonth = _generateInitialMonth();
     _fetchRentBill();
-    billsStream = _getBillsStream(selectedMonth);
+    _updateBillStreams(selectedMonth);
+    _determineUserRole();
+    // billsStream = _getBillsStream(selectedMonth);
+  }
+
+  Future<void> _determineUserRole() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final role = docSnapshot.data()?['role'] ?? 'user';
+      setState(() {
+        userRole = role;
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false); // Handle not logged in state
+    }
+  }
+
+  void _updateBillStreams(DateTime month) {
+    String monthYear = _formatMonthYear(month);
+    personalBillStream = _getPersonalBillStream(monthYear);
+    generalBillStream = _getGeneralBillStream(monthYear);
+  }
+
+  String _formatMonthYear(DateTime date) {
+    return "${date.month}-${date.year}";
+  }
+
+  String _formatMonthForDisplay(DateTime date) {
+    return "${date.month.toString().padLeft(2, '0')}-${date.year}";
   }
 
   DateTime _generateInitialMonth() {
@@ -39,15 +80,139 @@ class _BillScreenState extends State<BillScreen> {
     return DateTime(currentMonth.year, currentMonth.month);
   }
 
-  Stream<QuerySnapshot> _getBillsStream(DateTime month) {
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
-    return FirebaseFirestore.instance
+  Future<void> _savePersonalBill(
+      DateTime selectedMonth, Bill bill, String userId) async {
+    // Convert selectedMonth to a month-year string format if needed
+    String monthYear = "${selectedMonth.month}-${selectedMonth.year}";
+
+    // Convert DateTime to Timestamp if saving to Firestore
+    Timestamp billTimestamp = Timestamp.fromDate(bill.timestamp);
+
+    // Construct your bill data map, ensuring dates are properly converted
+    Map<String, dynamic> billData = {
+      'water': bill.water,
+      'electricity': bill.electricity,
+      'wifi': bill.wifi,
+      'rent': bill.rent,
+      'total': bill.total,
+      'timestamp': billTimestamp,
+    };
+
+    await FirebaseFirestore.instance
+        .collection('personalBills')
+        .doc(userId)
         .collection('bills')
-        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
-        .where('timestamp', isLessThanOrEqualTo: endOfMonth)
+        .doc(monthYear)
+        .set(billData);
+  }
+
+  Future<void> _saveGeneralBill(DateTime date, Bill bill) async {
+    String monthYear = "${date.month}-${date.year}";
+    await FirebaseFirestore.instance
+        .collection('generalBills')
+        .doc(monthYear)
+        .set({
+      'water': bill.water,
+      'electricity': bill.electricity,
+      'wifi': bill.wifi,
+      'total': bill.total,
+      'timestamp': bill.timestamp,
+    });
+  }
+
+  Stream<DocumentSnapshot> _getPersonalBillStream(String monthYear) {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print("No user logged in");
+      return Stream.empty();
+    }
+    return FirebaseFirestore.instance
+        .collection('personalBills')
+        .doc(user.uid)
+        .collection('bills')
+        .doc(monthYear)
         .snapshots();
   }
+
+  Stream<DocumentSnapshot> _getGeneralBillStream(String monthYear) {
+    return FirebaseFirestore.instance
+        .collection('generalBills')
+        .doc(monthYear)
+        .snapshots();
+  }
+
+  void _updateUserBillsWithGeneralBill(Bill generalBill) async {
+    final usersSnapshot =
+        await FirebaseFirestore.instance.collection('users').get();
+    for (var doc in usersSnapshot.docs) {
+      // Assuming each user document has a 'rent' field with the rent amount
+      final userRent = double.tryParse(doc.data()['rent'].toString()) ?? 0.0;
+
+      final sharedBill =
+          (generalBill.water + generalBill.electricity + generalBill.wifi) / 3;
+      final individualTotal =
+          sharedBill + userRent; // Using the user-specific rent value
+
+      final personalBill = Bill(
+        water: generalBill.water / 3,
+        electricity: generalBill.electricity / 3,
+        wifi: generalBill.wifi / 3,
+        rent: userRent, // Now using the fetched userRent value
+        total: individualTotal,
+        timestamp:
+            DateTime.now(), // Ensure this is converted correctly for Firestore
+      );
+
+      await _savePersonalBill(selectedMonth, personalBill, doc.id);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User bills updated successfully.')));
+  }
+
+  void _handleAdminBillSubmission() async {
+    // Assuming rentBill holds the latest rent value fetched from Firestore
+    final rent = rentBill; // Use the rent value fetched from Firestore
+
+    final water = double.tryParse(waterController.text) ?? 0.0;
+    final electricity = double.tryParse(electricityController.text) ?? 0.0;
+    final wifi = double.tryParse(wifiController.text) ?? 0.0;
+
+    // Calculate the shared part of the bill (excluding rent, divided by 3)
+    final sharedBill = (water + electricity + wifi) / 3;
+
+    final generalBill = Bill(
+      water: water,
+      electricity: electricity,
+      wifi: wifi,
+      rent: 0, // Rent is not part of the general bill
+      total: water + electricity + wifi, // General bill total (without rent)
+      timestamp: DateTime.now(),
+    );
+
+    try {
+      await _saveGeneralBill(selectedMonth, generalBill);
+
+      // Assuming _updateUserBillsWithGeneralBill will use the sharedBill and add individual rent
+      _updateUserBillsWithGeneralBill(generalBill);
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('General bill saved.')));
+    } catch (e) {
+      print("Failed to save general bill: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save general bill.')));
+    }
+  }
+
+  // Stream<QuerySnapshot> _getBillsStream(DateTime month) {
+  //   final startOfMonth = DateTime(month.year, month.month, 1);
+  //   final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+  //   return FirebaseFirestore.instance
+  //       .collection('bills')
+  //       .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
+  //       .where('timestamp', isLessThanOrEqualTo: endOfMonth)
+  //       .snapshots();
+  // }
 
   Future<void> _fetchRentBill() async {
     User? user = FirebaseAuth.instance.currentUser;
@@ -79,30 +244,47 @@ class _BillScreenState extends State<BillScreen> {
     }
   }
 
-  void _saveBill() async {
-    final waterBill = double.parse(waterController.text);
-    final electricityBill = double.parse(electricityController.text);
-    final wifiBill = double.parse(wifiController.text);
+  // void _saveBill() async {
+  //   final waterBill = double.parse(waterController.text);
+  //   final electricityBill = double.parse(electricityController.text);
+  //   final wifiBill = double.parse(wifiController.text);
+  //   final rent = double.parse(
+  //       rentController.text); // Assuming rent is part of personal bills only
 
-    setState(() {
-      totalBill = waterBill + electricityBill + wifiBill + rentBill;
-      splitAmount = totalBill / 3; // Adjust based on your splitting logic.
-    });
+  //   setState(() {
+  //     totalBill = waterBill + electricityBill + wifiBill + rent;
+  //     splitAmount = totalBill / 3; // Adjust based on your splitting logic.
+  //   });
 
-    final newBill = Bill(
-      water: waterBill,
-      electricity: electricityBill,
-      wifi: wifiBill,
-      rent: rentBill,
-      total: totalBill,
-      timestamp: DateTime.now(), // Ensure your Bill model accepts a Timestamp.
-    );
+  //   // Create the Bill object for personal bill
+  //   final personalBill = Bill(
+  //     water: waterBill,
+  //     electricity: electricityBill,
+  //     wifi: wifiBill,
+  //     rent: rent,
+  //     total: totalBill,
+  //     timestamp: DateTime.now(),
+  //   );
 
-    await FirebaseFirestore.instance.collection('bills').add(newBill.toMap());
+  //   // Create a similar Bill object for the general bill, excluding the rent
+  //   final generalBill = Bill(
+  //     water: waterBill,
+  //     electricity: electricityBill,
+  //     wifi: wifiBill,
+  //     rent: rent,
+  //     total: waterBill + electricityBill + wifiBill, // No rent included
+  //     timestamp: DateTime.now(),
+  //   );
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Bill saved successfully')));
-  }
+  //   // Save the personal bill
+  //   await _savePersonalBill(selectedMonth, personalBill);
+
+  //   // Save the general bill
+  //   await _saveGeneralBill(selectedMonth, generalBill);
+
+  //   ScaffoldMessenger.of(context)
+  //       .showSnackBar(SnackBar(content: Text('Bill saved successfully')));
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -123,14 +305,6 @@ class _BillScreenState extends State<BillScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Enter Bill Details',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -140,96 +314,20 @@ class _BillScreenState extends State<BillScreen> {
                     onChanged: (DateTime? newValue) {
                       setState(() {
                         selectedMonth = newValue!;
-                        billsStream = _getBillsStream(selectedMonth);
+                        _updateBillStreams(selectedMonth);
                       });
                     },
-                    items: List<DropdownMenuItem<DateTime>>.generate(
-                      12,
-                      (int index) {
-                        final currentMonth = DateTime.now()
-                            .subtract(Duration(days: DateTime.now().day - 1));
-                        final month = DateTime(
-                            currentMonth.year, currentMonth.month - index);
-                        return DropdownMenuItem<DateTime>(
-                          value: month,
-                          child: Text('${month.year}/${month.month}'),
-                        );
-                      },
-                    ),
+                    items: months
+                        .map<DropdownMenuItem<DateTime>>((DateTime value) {
+                      return DropdownMenuItem<DateTime>(
+                        value: value,
+                        child: Text(_formatMonthForDisplay(value)),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
-              SizedBox(height: 20),
-              TextFormField(
-                controller: waterController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Water Bill (RM)',
-                  border: OutlineInputBorder(),
-                  hintText: '0.00',
-                ),
-              ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: electricityController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Electricity Bill (RM)',
-                  border: OutlineInputBorder(),
-                  hintText: '0.00',
-                ),
-              ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: wifiController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Wifi Bill (RM)',
-                  border: OutlineInputBorder(),
-                  hintText: '0.00',
-                ),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Enter Bill Details',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              // Other widgets...
-              SizedBox(height: 20),
-              TextFormField(
-                controller: rentController, // Use the controller here
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: 'Rent Bill (RM)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              // Other widgets...
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _saveBill,
-                child: Text('Save Bill'),
-              ),
-              SizedBox(height: 20),
-              if (totalBill > 0)
-                Column(
-                  children: [
-                    Text(
-                      'Total Bill: \$${totalBill.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Each Person Pays: \$${splitAmount.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    SizedBox(height: 20),
-                  ],
-                ),
+              if (userRole == 'admin') _buildAdminBillEntryForm(),
               SizedBox(height: 20),
               Text(
                 'Bill Statements',
@@ -240,58 +338,107 @@ class _BillScreenState extends State<BillScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 10),
-              StreamBuilder<QuerySnapshot>(
-                stream: billsStream,
+              StreamBuilder<DocumentSnapshot>(
+                stream: generalBillStream,
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return CircularProgressIndicator();
-                  final bills = snapshot.data!.docs;
-                  return ListView.builder(
-                    physics: NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    itemCount: bills.length,
-                    itemBuilder: (context, index) {
-                      final bill = bills[index];
-                      return Container(
-                        margin: EdgeInsets.symmetric(vertical: 5),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Bill ${index + 1}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Divider(color: Colors.grey),
-                            Text('Water: RM${bill['water']}'),
-                            Divider(color: Colors.grey),
-                            Text('Electricity: RM${bill['electricity']}'),
-                            Divider(color: Colors.grey),
-                            Text('Wifi: RM${bill['wifi']}'),
-                            Divider(color: Colors.grey),
-                            Text('Rent: RM${bill['rent']}'),
-                            Divider(color: Colors.grey),
-                            Text(
-                              'Total: RM${bill['total']}',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
+                  var data =
+                      snapshot.data?.data() as Map<String, dynamic>? ?? {};
+                  return BillDetailsWidget(billData: data, billType: "General");
                 },
-              )
+              ),
+              SizedBox(height: 10),
+              StreamBuilder<DocumentSnapshot>(
+                stream: personalBillStream,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return CircularProgressIndicator();
+                  var data =
+                      snapshot.data?.data() as Map<String, dynamic>? ?? {};
+                  return BillDetailsWidget(
+                      billData: data, billType: "Personal");
+                },
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAdminBillEntryForm() {
+    return Column(
+      children: [
+        Text(
+          'Enter Bill Details',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 10),
+        TextFormField(
+          controller: waterController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Water Bill (RM)',
+            border: OutlineInputBorder(),
+            hintText: '0.00',
+          ),
+        ),
+        SizedBox(height: 10),
+        TextFormField(
+          controller: electricityController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Electricity Bill (RM)',
+            border: OutlineInputBorder(),
+            hintText: '0.00',
+          ),
+        ),
+        SizedBox(height: 10),
+        TextFormField(
+          controller: wifiController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Wifi Bill (RM)',
+            border: OutlineInputBorder(),
+            hintText: '0.00',
+          ),
+        ),
+        SizedBox(height: 20),
+        // Other widgets...
+        TextFormField(
+          controller: rentController, // Use the controller here
+          readOnly: true,
+          decoration: InputDecoration(
+            labelText: 'Rent Bill (RM)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        // Other widgets...
+        SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: _handleAdminBillSubmission,
+          child: Text('Save Bill'),
+        ),
+        SizedBox(height: 20),
+        if (totalBill > 0)
+          Column(
+            children: [
+              Text(
+                'Total Bill: \$${totalBill.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 18),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Each Person Pays: \$${splitAmount.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 18),
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
+      ],
     );
   }
 }
