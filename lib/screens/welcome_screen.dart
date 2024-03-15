@@ -48,6 +48,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               // Flexible(
               //   child: FlutterLogo(size: 200.0),
               // ),
+              Flexible(
+                child: Hero(
+                  tag: 'logo',
+                  child: Container(
+                    height: 100.0,
+                    child: Image.asset('assets/icons/home.png'),
+                  ),
+                ),
+              ),
               SizedBox(height: 48.0),
               showLoginScreen ? _loginForm() : _registerForm(),
               Padding(

@@ -41,6 +41,7 @@ dependencies:
   cloud_firestore: ^4.15.6
   google_sign_in: ^6.2.1
   url_launcher: ^6.2.5
+  flutter_launcher_icons: ^0.13.1
   
 dev_dependencies:
   flutter_test:
@@ -69,6 +70,13 @@ flutter:
     - assets/icons/whatsapp.png
     - assets/icons/home.png
     - assets/icons/google.png
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/home.png" # Replace with your app icon image file's path
+
+  
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
