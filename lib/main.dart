@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       initialRoute: 'welcome_screen',
       routes: {
         'welcome_screen': (context) => WelcomeScreen(),

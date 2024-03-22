@@ -6,6 +6,7 @@ import 'package:rumah_sewa_app/screens/personalTodoList_screen.dart';
 import 'package:rumah_sewa_app/screens/splitBillCalculator_screen.dart';
 import 'package:rumah_sewa_app/utils/auth_service.dart';
 import '../utils/item.dart';
+import 'package:flutter/services.dart';
 
 User? loggedinUser;
 
@@ -174,6 +175,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _auth = FirebaseAuth.instance;
   final TextEditingController _itemNameController = TextEditingController();
+  final String homeAddress =
+      "A4-5-17,A4-5-17, JALAN BUKIT SEGAR 1, TAMAN BUKIT SEGAR, JALAN CHERAS, 43200 SELANGOR, Ulu Langat, 43200, Selangor";
+
+  bool _isRiceCooked = false;
+  final String _riceStatusDocPath = 'statuses/riceCookingStatus';
 
   void initState() {
     super.initState();
@@ -235,12 +241,42 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _copyToClipboard(String text) {
+    Clipboard.setData(ClipboardData(text: text)).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Address copied to clipboard!"),
+        ),
+      );
+    });
+  }
+
+  void _loadRiceCookingStatus() async {
+    DocumentSnapshot snapshot =
+        await FirebaseFirestore.instance.doc(_riceStatusDocPath).get();
+    setState(() {
+      _isRiceCooked = snapshot['isCooked'] ?? false;
+    });
+  }
+
+  void _toggleRiceCookingStatus() async {
+    setState(() {
+      _isRiceCooked = !_isRiceCooked;
+    });
+    await FirebaseFirestore.instance
+        .doc(_riceStatusDocPath)
+        .set({'isCooked': _isRiceCooked});
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.max,
         children: [
+          _buildHomeAddressCard(),
+          _buildRiceStatusCard(),
           _buildCategoryCard('Barang Masak'),
           _buildCategoryCard('Barang Rumah'),
           _buildCategoryCard('Barang Nak Kene Beli'),
@@ -366,6 +402,74 @@ class _HomePageState extends State<HomePage> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildHomeAddressCard() {
+    // Returning the address card widget
+    return Card(
+      margin: EdgeInsets.all(16),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => _copyToClipboard(homeAddress),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Home Address",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                homeAddress,
+                style: TextStyle(
+                  fontSize: 14,
+                ),
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 3,
+              ),
+              SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  "Tap to copy",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRiceStatusCard() {
+    return Card(
+      margin: EdgeInsets.all(16),
+      color: _isRiceCooked ? Colors.green : Colors.red,
+      child: ListTile(
+        onTap: _toggleRiceCookingStatus,
+        title: Text(
+          _isRiceCooked ? 'Rice is Cooked' : 'Rice is Not Cooked',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        leading: Icon(_isRiceCooked ? Icons.check_circle : Icons.cancel,
+            color: Colors.white),
+        trailing: Icon(Icons.touch_app, color: Colors.white),
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rumah_sewa_app/utils/bill_split_item.dart';
 import 'package:rumah_sewa_app/widget/billSplitterDisplayCard.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -13,21 +14,47 @@ class SplitBillCalculatorPage extends StatefulWidget {
 class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
   TextEditingController _itemCostController = TextEditingController();
   double _totalBillAmount = 0.0;
+  List<BillItem> _billItems = [];
+  Map<String, bool> _selectedForSplit = {
+    "Irfan": false,
+    "Alep": false,
+    "Ustaz": false
+  }; // Tracks who's involved in the current item
   Map<String, double> _splitAmounts = {"Irfan": 0.0, "Alep": 0.0, "Ustaz": 0.0};
 
   void _addItem() {
-    setState(() {
-      _totalBillAmount += double.parse(
-          _itemCostController.text.isEmpty ? "0" : _itemCostController.text);
-      _itemCostController.clear();
-      _calculateSplitAmount();
-    });
+    double cost = double.tryParse(_itemCostController.text) ?? 0;
+    if (cost > 0) {
+      setState(() {
+        _billItems
+            .add(BillItem(cost: cost, splitAmong: Map.from(_selectedForSplit)));
+        _itemCostController.clear();
+        _selectedForSplit.updateAll((key, value) => false); // Reset selection
+        _calculateSplitAmount(); // Recalculate split
+      });
+    }
   }
 
   void _calculateSplitAmount() {
-    double splitAmount = _totalBillAmount / _splitAmounts.length;
-    _splitAmounts =
-        _splitAmounts.map((key, value) => MapEntry(key, splitAmount));
+    Map<String, double> newSplitAmounts = {
+      "Irfan": 0.0,
+      "Alep": 0.0,
+      "Ustaz": 0.0
+    };
+
+    for (var billItem in _billItems) {
+      billItem.splitAmong.forEach((name, isIncluded) {
+        if (isIncluded) {
+          newSplitAmounts[name] = (newSplitAmounts[name] ?? 0) +
+              (billItem.cost /
+                  billItem.splitAmong.values.where((e) => e).length);
+        }
+      });
+    }
+
+    setState(() {
+      _splitAmounts = newSplitAmounts;
+    });
   }
 
   void _reset() {
@@ -47,6 +74,35 @@ class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
             style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
         tileColor: Colors.grey[200],
       ),
+    );
+  }
+
+  Widget _buildPersonSelector() {
+    return Column(
+      children: _selectedForSplit.keys.map((name) {
+        return Card(
+          elevation: 2,
+          margin: EdgeInsets.only(bottom: 8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: CheckboxListTile(
+            title: Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
+            value: _selectedForSplit[name],
+            onChanged: (bool? value) {
+              setState(() {
+                _selectedForSplit[name] = value!;
+              });
+            },
+            secondary: Icon(Icons.person, color: Colors.blueAccent),
+            activeColor: Colors.blueAccent,
+            checkColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -119,7 +175,7 @@ class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
         padding: EdgeInsets.all(20.0),
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               Text(
                 'Add Items',
@@ -128,16 +184,40 @@ class _SplitBillCalculatorPageState extends State<SplitBillCalculatorPage> {
               SizedBox(height: 10.0),
               TextField(
                 controller: _itemCostController,
-                decoration: InputDecoration(labelText: 'Item Cost (RM)'),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Item Cost (RM)',
+                  labelStyle: TextStyle(color: Colors.blueAccent),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide:
+                        BorderSide(color: Colors.blueAccent, width: 2.0),
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide:
+                        BorderSide(color: Colors.greenAccent, width: 2.0),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
               ),
               SizedBox(height: 10.0),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: _addItem,
-                  child: Text('Add Item', style: TextStyle(fontSize: 18.0)),
+              _buildPersonSelector(),
+              SizedBox(height: 10.0),
+              ElevatedButton(
+                onPressed: _addItem,
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor:
+                      Color.fromARGB(255, 27, 157, 222), // Text color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(7.0),
+                  ),
+                  padding:
+                      EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
+                  textStyle:
+                      TextStyle(fontSize: 15.0, fontWeight: FontWeight.bold),
                 ),
+                child: Text('Add Item'),
               ),
               SizedBox(height: 20.0),
               Text(

@@ -7,14 +7,14 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:725715994778:android:e83a850b36a630d9887723",
+        "mobilesdk_app_id": "1:725715994778:android:934715afebfae138887723",
         "android_client_info": {
           "package_name": "com.rumah_sewa_app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "725715994778-2dn83hmgd5e95m2tvu1ba5q7tla29kgs.apps.googleusercontent.com",
+          "client_id": "725715994778-9m9c3s4ma3n3pdph0vkaj9kcn0dblf5b.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.rumah_sewa_app",
@@ -42,7 +42,7 @@
               "client_id": "725715994778-ej83224nro0rl2e8c18iukn4bd8penjo.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.rumahSewaApp"
+                "bundle_id": "com.example.rumahSewaApp"
               }
             }
           ]
